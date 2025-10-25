@@ -1,0 +1,5 @@
+file(GLOB game_src_files *.cpp *.h)
+add_library(lib_reversi ${game_src_files})
+target_link_libraries(lib_reversi PUBLIC lib_imgui)
+target_include_directories(lib_reversi PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+message("from game dir: ${CMAKE_CURRENT_SOURCE_DIR}")
