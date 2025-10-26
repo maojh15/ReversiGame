@@ -7,7 +7,6 @@ set(CMAKE_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/bin)
 find_package(SDL2 REQUIRED)
 # 计算 SDL2 动态库所在目录并设置 rpath，这样运行 ./main 时 dyld 能找到 libSDL2-2.0.0.dylib
 include(findsdl2dir.cmake)
-message(STATUS "SDL2 library dir: ${SDL2_LIB_DIR}")
 
 # 在构建和安装时使用这个 rpath
 set(CMAKE_INSTALL_RPATH "${SDL2_LIB_DIR}")

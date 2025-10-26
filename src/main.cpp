@@ -18,16 +18,13 @@ int main(int, char**)
     LoadFonts();
 
     // Our state
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-
     ReversiGame &game = ReversiGame::GetInstance();
+    ImVec4 &clear_color = game.game_ui.background_col.Value;
 
-    ImGuiIdleOptimizer idle_optim(1.0, 5.0f, 60.0f);
-    double ms_per_frame = 1000.0 / 60;
+    ImGuiIdleOptimizer idle_optim(1.0, 9.0f, 60.0f);
     auto &io = ImGui::GetIO();
     // Main loop
     bool done = false;
-    Uint64 last_time_ms = SDL_GetTicks64();
 #ifdef __EMSCRIPTEN__
     // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.
     // You may manually call LoadIniSettingsFromMemory() to load settings from your own storage.
@@ -62,6 +59,9 @@ int main(int, char**)
                 done = true;
                 active_flag = true;
             }
+            if (event.type == SDL_MOUSEMOTION || event.type == SDL_MOUSEBUTTONDOWN) {
+                active_flag = true;
+            }
         }
         if (active_flag) {
             idle_optim.onUserInput();
@@ -78,11 +78,18 @@ int main(int, char**)
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
 
+        static float col[3];
+        ImGui::ColorEdit3("board col", col);
+
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 9);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.5f);
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.334f, 0.252f, 0.485f, 1.000f));
+        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.236f, 0.074f, 0.397f, 1.000f));
 
         game.MainLoop();
 
-        ImGui::PopStyleVar(1);
+        ImGui::PopStyleColor(2);
+        ImGui::PopStyleVar(2);
 
         // Rendering
         ImGui::Render();
