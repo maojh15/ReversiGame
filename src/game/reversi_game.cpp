@@ -1,9 +1,11 @@
 #include "reversi_game.h"
+#include "monte_carlo_tree_search.h"
 
 #include <fstream>
 #include <iostream>
 #include <vector>
 #include <utility>
+#include <thread>
 
 void ReversiGame::MainLoop()
 {
@@ -36,6 +38,10 @@ void ReversiGame::MainLoop()
     }
     if (ImGui::Button("dump config")) {
         DumpConfig();
+    }
+
+    if (!is_player_turn_ && game_state_ == GameState::PLAYING && ai_think_finish) {
+        SearchMove();
     }
 
     HandleUserInput();
@@ -114,6 +120,7 @@ void ReversiGame::PlaceStone(int grid_x, int grid_y)
         is_player_turn_ = !is_player_turn_;
         next_move_stone_ = opp_stone;
     }
+    hint_text_ = is_player_turn_ ? hint_players_turn : hint_computer_turn;
     ResetIsMoveValid();
 }
 
@@ -124,6 +131,9 @@ void ReversiGame::HandleUserInput()
     }
 
     auto &io = ImGui::GetIO();
+    if (io.WantCaptureMouse) {
+        return;
+    }
     if (io.MouseClicked[0] &&
         io.MousePos.x >= game_ui.board_left_top_pos.x && io.MousePos.x <= game_ui.board_right_btm_pos.x &&
         io.MousePos.y >= game_ui.board_left_top_pos.y && io.MousePos.y <= game_ui.board_right_btm_pos.y) {
@@ -150,6 +160,28 @@ void ReversiGame::UpdateStoneCount()
     }
 }
 
+void ReversiGame::SearchMove()
+{
+    ai_think_finish = false;
+    for (auto &th : ai_think_threads_) {
+        th.join();
+    }
+    ai_think_threads_.clear();
+    ai_think_threads_.emplace_back(std::thread([this]() mutable {
+        auto move = mcts_.SearchMove(board_state_, next_move_stone_, monte_carlo_iter_steps_);
+        std::cout << "num nodes: " << mcts_.GetTreeNodesNumbers() << std::endl;
+        std::cout << "depth: " << mcts_.GetTreeDepth() << std::endl;
+        std::cout << "node in each depth: [";
+        auto list_depth = mcts_.StatDepthNodesNumbers();
+        for (int i = 0; i < list_depth.size(); ++i) {
+            std::cout << list_depth[i] << ", ";
+        }
+        std::cout << "]" << std::endl;
+        PlaceStone(move.first, move.second);
+        ai_think_finish = true;
+    }));
+}
+
 void ReversiGame::InitialGame()
 {
     game_state_ = GameState::PLAYING;
@@ -163,16 +195,16 @@ void ReversiGame::InitialGame()
     board_state_[initial_stone_pos+1][initial_stone_pos] =
         board_state_[initial_stone_pos][initial_stone_pos+1] = Stone::WHITE;
     
-    count_black_ = 2;
-    count_white_ = 2;
-
     next_move_stone_ = Stone::BLACK;
     valid_moves_ = GetValidMoves(next_move_stone_, board_state_);
+    UpdateStoneCount();
     ResetIsMoveValid();
 
     this_game_player_first = next_game_player_first;
     is_player_turn_ = next_game_player_first;
     hint_text_ = is_player_turn_ ? hint_players_turn : hint_computer_turn;
+
+    ai_think_finish = true;
 }
 
 

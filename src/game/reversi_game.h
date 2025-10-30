@@ -3,6 +3,7 @@
 
 #include "game_ui.h"
 #include "game_const.h"
+#include "monte_carlo_tree_search.h"
 
 #include "imgui.h"
 #include "SDL.h"
@@ -10,6 +11,8 @@
 
 #include <vector>
 #include <utility>
+#include <atomic>
+#include <thread>
 
 class ReversiGame {
 public:
@@ -32,6 +35,11 @@ public:
     static Stone GetOpponentStone(Stone stone);
     static void UpdateBoardWithPlacementStone(std::vector<std::vector<Stone>> &board_state, int place_x, int place_y, Stone place_stone);
 
+    ~ReversiGame() {
+        for (auto &t: ai_think_threads_) {
+            t.join();
+        }
+    }
 private:
     ReversiGame() {
         LoadConfig();
@@ -57,6 +65,8 @@ private:
     void HandleUserInput();
     void UpdateStoneCount();
 
+    void SearchMove();
+
     YAML::Node config;
 
     int board_size_ = 8;
@@ -78,9 +88,14 @@ private:
     friend GameUI;
 
     const std::string hint_players_turn = "player's turn";
-    const std::string hint_computer_turn = "AI's turn\nComputer is thinking ... ";
+    const std::string hint_computer_turn = "AI is thinking ... ";
     const std::string hint_player_win = "You win";
-    const std::string hint_player_loss = "You loss";    
+    const std::string hint_player_loss = "You loss";  
+    
+    MonteCarloTreeSearch mcts_;
+    std::atomic<bool> ai_think_finish = true;
+    int monte_carlo_iter_steps_ = 10000;
+    std::vector<std::thread> ai_think_threads_;
 };
 
 #endif

@@ -82,14 +82,12 @@ void GameUI::DrawBoard(ReversiGame &game, const ImVec2 &left_top_pos, const ImVe
         ImVec2 rect_right_btm(left_top_pos.x + (grid_x + 1) * line_interval, left_top_pos.y + (grid_y + 1) * line_interval);
         ImU32 hint_stone_col = game.next_move_stone_ == Stone::WHITE ? white_col : black_col;
         hint_stone_col = (hint_stone_col & 0x00FFFFFF) | (0xE0 << 24); // make hint stone col more transparent (Alpha = 0x30 ≈ 19% opacity)
-        draw_list->AddCircleFilled(ImVec2(left_top_pos.x + (grid_x + 0.5) * line_interval,
-                                          left_top_pos.y + (grid_y + 0.5) * line_interval),
-                                   stone_radius, hint_stone_col);
+
         draw_list->AddRect(rect_left_top, rect_right_btm, hint_mouse_pos_col, 0, 0, 3);
-        if (!game.is_move_valid_[grid_x][grid_y]) {
-            draw_list->AddLine(rect_left_top, rect_right_btm, hint_mouse_pos_col, 3);
-            draw_list->AddLine(ImVec2(rect_right_btm.x, rect_left_top.y),
-                               ImVec2(rect_left_top.x, rect_right_btm.y), hint_mouse_pos_col, 3);
+        if (game.is_move_valid_[grid_x][grid_y]) {
+            draw_list->AddCircleFilled(ImVec2(left_top_pos.x + (grid_x + 0.5) * line_interval,
+                                            left_top_pos.y + (grid_y + 0.5) * line_interval),
+                                    stone_radius, hint_stone_col);
         }
     }
    
@@ -177,13 +175,20 @@ void GameUI::DrawHintTextPanel(ReversiGame &game)
 
     draw_list->AddCircleFilled(ImVec2(cur_win_pos.x + cur_pos.x + stone_radius, cur_win_pos.y + cur_pos.y + stone_radius), stone_radius, black_col);
     ImGui::SetCursorPosX(cur_pos.x + 2 * stone_radius + 2);
-    ImGui::Text(": %d", game.count_black_);
+    ImGui::Text(": %d %s", game.count_black_, game.this_game_player_first ? "[Player]" : "");
     cur_pos = ImGui::GetCursorPos();
     draw_list->AddCircleFilled(ImVec2(cur_win_pos.x + cur_pos.x + stone_radius, cur_win_pos.y + cur_pos.y + stone_radius), stone_radius, white_col);
     ImGui::SetCursorPosX(cur_pos.x + 2 * stone_radius + 2);
-    ImGui::Text(": %d", game.count_white_);
+    ImGui::Text(": %d %s", game.count_white_, game.this_game_player_first ? "" : "[Player]");
     ImGui::Text("%s", game.hint_text_.c_str());
+    ImGui::Text("current move: ");
+    ImGui::SameLine(0, 0);
+    cur_pos = ImGui::GetCursorPos();
+    draw_list->AddCircleFilled(ImVec2(cur_win_pos.x + cur_pos.x + stone_radius, cur_win_pos.y + cur_pos.y + stone_radius),
+                               stone_radius, game.next_move_stone_ == Stone::WHITE ? white_col : black_col);
     ImGui::End();
+
+    
 
     ImGui::Text("mouse pos: %.3f, %.3f", io.MousePos.x, io.MousePos.y);
     ImGui::Text("draw pos: %.3f, %.3f", cur_win_pos.x + cur_pos.x + stone_radius, cur_win_pos.x + cur_pos.y + stone_radius);

@@ -16,3 +16,4 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(yaml-cpp)
 
 target_link_libraries(lib_reversi PUBLIC yaml-cpp::yaml-cpp) # The library or executable that require yaml-cpp library
+target_include_directories(lib_reversi PUBLIC ../)
