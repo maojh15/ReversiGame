@@ -94,7 +94,7 @@ private:
     
     MonteCarloTreeSearch mcts_;
     std::atomic<bool> ai_think_finish = true;
-    int monte_carlo_iter_steps_ = 10000;
+    int monte_carlo_iter_steps_ = 60000;
     std::vector<std::thread> ai_think_threads_;
 };
 

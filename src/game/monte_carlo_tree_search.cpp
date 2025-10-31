@@ -9,7 +9,8 @@
 #include <functional>
 
 namespace {
-    std::mt19937 gen(std::random_device{}());
+//    std::mt19937 gen(std::random_device{}());
+    std::default_random_engine gen;
 }
 
 std::vector<std::pair<int, int>> GetEmptyPos(const GameState &board_state) {
@@ -103,7 +104,7 @@ std::pair<int, int> MonteCarloTreeSearch::SearchMove(const GameState &board_stat
         auto node = Selection();
         if (node == nullptr) continue;
         ExpandNode(node);
-        auto leaf = node->children.top();
+        auto leaf = *(node->children.begin());
         auto winner = Simulate(leaf->state, leaf->next_move_stone);
         BackPropagate(leaf, winner);
     }
@@ -119,7 +120,10 @@ std::shared_ptr<TreeNode> MonteCarloTreeSearch::Selection()
 {
     auto node = root;
     while (!node->children.empty()) {
-        node = node->children.top();
+        node = *std::max_element(node->children.begin(), node->children.end(),
+            [](const std::shared_ptr<TreeNode> &lhs, const std::shared_ptr<TreeNode> &rhs) {
+                return lhs->GetExploitPriority() < rhs->GetExploitPriority();
+            });
     }
     auto empty_pos = GetEmptyPos(node->state);
     std::set<std::pair<int, int>> empty_pos_set(empty_pos.begin(), empty_pos.end());
@@ -141,39 +145,27 @@ void MonteCarloTreeSearch::ExpandNode(const std::shared_ptr<TreeNode> &node)
         node->next_move_stone = ReversiGame::GetOpponentStone(node->next_move_stone);
         valid_moves = GetValidMovesFromHint(node->next_move_stone, node->state, empty_pos_set);
     }
-    std::vector<std::shared_ptr<TreeNode>> new_nodes;
     for (const auto &move : valid_moves) {
         GameState new_state = node->state;
         ReversiGame::UpdateBoardWithPlacementStone(new_state, move.first, move.second, node->next_move_stone);
         auto new_node = std::make_shared<TreeNode>(new_state, node, ReversiGame::GetOpponentStone(node->next_move_stone), move);
-        new_nodes.emplace_back(new_node);
-    }
-    std::shuffle(new_nodes.begin(), new_nodes.end(), gen);
-    for (const auto &new_node : new_nodes) {
-        node->children.push(new_node);
+        node->children.emplace_back(new_node);
     }
 }
 
 void MonteCarloTreeSearch::BackPropagate(const std::shared_ptr<TreeNode> &node, Stone win_stone)
 {
-    std::vector<std::shared_ptr<TreeNode>> path;
     auto cur_node = node;
-    while (cur_node != nullptr) {
-        path.emplace_back(cur_node);
+    while (cur_node != root) {
+        cur_node->visit_count++;
+        if (cur_node->parent->next_move_stone == win_stone) {
+            cur_node->win_count++;
+        } else if (win_stone == Stone::EMPTY){
+            cur_node->win_count += 0.5;
+        }
         cur_node = cur_node->parent;
     }
-    auto it = path.rbegin(); // path.rbegin() is root node
-    for (++it; it != path.rend(); ++it) {
-        (*it)->visit_count++;
-        if ((*it)->parent->next_move_stone == win_stone) {
-            (*it)->win_count++;
-        } else if (win_stone == Stone::EMPTY){
-            (*it)->win_count += 0.5;
-        }
-        (*it)->parent->children.pop();
-        (*it)->UpdateExploitPriority();
-        (*it)->parent->children.push(*it);
-    }
+    root->visit_count++;
 }
 
 /**
@@ -217,76 +209,49 @@ Stone MonteCarloTreeSearch::Simulate(const GameState &board_state, Stone next_mo
 
 std::pair<int, int> MonteCarloTreeSearch::GetBestMove()
 {
-    std::shared_ptr<TreeNode> best_node = root->children.top();
-    std::vector<std::shared_ptr<TreeNode>> children_list;
-    float best_win_ratio = best_node->win_count / best_node->visit_count;
-    while (!root->children.empty()) {
-        children_list.emplace_back(root->children.top());
-        float win_ratio = root->children.top()->win_count / root->children.top()->visit_count;
-        if (win_ratio > best_win_ratio) {
-            best_node = root->children.top();
-            best_win_ratio = win_ratio;
-        }
-        root->children.pop();
-    }
-    for (const auto &ch : children_list) {
-        root->children.push(ch);
-    }
+    std::shared_ptr<TreeNode> best_node = *std::max_element(root->children.begin(), root->children.end(),
+        [](const std::shared_ptr<TreeNode> &lhs, const std::shared_ptr<TreeNode> &rhs) {
+            return lhs->visit_count < rhs->visit_count;
+        });
     std::cout << "win ratio: " << best_node->win_count << "/" << best_node->visit_count
         << " = " << best_node->win_count / best_node->visit_count << std::endl;
+    for (const auto &ch : root->children) {
+        std::cout << "[" << ch->win_count << "/" << ch->visit_count
+            << "=" << ch->win_count / ch->visit_count << "] ";
+    }
+    std::cout << std::endl;
+    std::cout << "root visit count: " << root->visit_count << std::endl;
     return best_node->from_move;
 }
 
-
-std::vector<int> MonteCarloTreeSearch::StatDepthNodesNumbers() {
+std::vector<int> MonteCarloTreeSearch::StatDepthNodesNumbers() const {
     std::vector<int> depth_nodes_numbers;
-    std::function<void(TreeNode &, int)> dfs =
-        [&](TreeNode &node, int depth) {
+    std::function<void(const TreeNode &, int)> dfs =
+        [&](const TreeNode &node, int depth) {
             if (depth >= depth_nodes_numbers.size()) {
                 depth_nodes_numbers.push_back(0);
             }
             depth_nodes_numbers[depth] += 1;
-            std::vector<std::shared_ptr<TreeNode>> children_list;
-            children_list.reserve(node.children.size());
-            while (!node.children.empty()) {
-                children_list.emplace_back(node.children.top());
-                node.children.pop();
-            }
-            for (const auto &ch : children_list) {
+            for (const auto &ch : node.children) {
                 dfs(*ch, depth + 1);
-                node.children.push(ch);
             }
         };
     dfs(*root, 0);
     return depth_nodes_numbers;
 }
 
-int MonteCarloTreeSearch::GetTreeNodesNumbers_(TreeNode &node) {
+int MonteCarloTreeSearch::GetTreeNodesNumbers_(const TreeNode &node) const {
     int count = 1;
-    std::vector<std::shared_ptr<TreeNode>> children_list;
-    children_list.reserve(node.children.size());
-    while (!node.children.empty()) {
-        children_list.emplace_back(node.children.top());
-        node.children.pop();
-    }
-    for (auto &ch : children_list) {
+    for (auto &ch : node.children) {
         count += GetTreeNodesNumbers_(*ch);
-        node.children.push(ch);
     }
     return count;
 }
 
-int MonteCarloTreeSearch::GetTreeDepth_(TreeNode &node) {
+int MonteCarloTreeSearch::GetTreeDepth_(const TreeNode &node) const {
     int depth = 0;
-    std::vector<std::shared_ptr<TreeNode>> children_list;
-    children_list.reserve(node.children.size());
-    while (!node.children.empty()) {
-        children_list.emplace_back(node.children.top());
-        node.children.pop();
-    }
-    for (auto &ch : children_list) {
+    for (auto &ch : node.children) {
         depth = std::max(depth, GetTreeDepth_(*ch));
-        node.children.push(ch);
     }
     return depth + 1;
 }

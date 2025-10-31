@@ -1,6 +1,6 @@
 # Reversi Game
 
-A feature-rich Reversi (Othello) game implementation with an AI opponent powered by Monte Carlo Tree Search (MCTS) algorithm. Built with C++17, SDL2, and Dear ImGui for a modern graphical interface.
+A Reversi (Othello) game implementation with an AI opponent powered by Monte Carlo Tree Search (MCTS) algorithm. Built with C++17, SDL2, and Dear ImGui for a modern graphical interface.
 
 ![Screenshot](fig/screen_shot.png)
 
@@ -9,10 +9,6 @@ A feature-rich Reversi (Othello) game implementation with an AI opponent powered
 - **Graphical User Interface**: Clean and intuitive UI built with Dear ImGui
 - **AI Opponent**: Intelligent computer player using Monte Carlo Tree Search algorithm
 - **Customizable Board**: Configurable board size (default 8x8)
-- **Visual Hints**: Valid move indicators and mouse position highlighting
-- **Game Statistics**: Real-time stone count and game state tracking
-- **Move History**: Complete record of all moves made during the game
-- **Configurable Appearance**: Customizable colors and UI settings via YAML configuration
 - **Performance Optimized**: Idle frame rate optimization to reduce CPU usage
 
 ## Game Rules
@@ -45,7 +41,7 @@ Reversi (also known as Othello) is a strategy board game for two players. The ga
 ### Clone the Repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/maojh15/ReversiGame.git
 cd ReversiGame
 ```
 
@@ -234,6 +230,7 @@ If CMake cannot find SDL2:
 - **ImGui**: [Dear ImGui](https://github.com/ocornut/imgui) by Omar Cornut
 - **yaml-cpp**: [yaml-cpp](https://github.com/jbeder/yaml-cpp) by Jesse Beder
 - **SDL2**: [Simple DirectMedia Layer](https://www.libsdl.org/)
+- **pgbar**: [pgbar](https://github.com/Konvt/pgbar.git) by Konvt
 
 ## Contributing
 

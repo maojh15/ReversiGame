@@ -9,6 +9,7 @@
 #include <limits>
 #include <cmath>
 #include <queue>
+#include <iostream>
 
 using GameState = std::vector<std::vector<Stone>>;
 
@@ -18,30 +19,21 @@ struct TreeNode {
     Stone next_move_stone;
     std::pair<int, int> from_move;
 
-    struct NodeComparator {
-        bool operator()(const std::shared_ptr<TreeNode> &lhs, const std::shared_ptr<TreeNode> &rhs) {
-            return lhs->exploit_priority < rhs->exploit_priority;
-        }
-    };
-
-    std::priority_queue<std::shared_ptr<TreeNode>, std::vector<std::shared_ptr<TreeNode>>, NodeComparator> children;
+    std::vector<std::shared_ptr<TreeNode>> children;
     int visit_count = 0;
     double win_count = 0;
-    double exploit_priority = 0.0;
 
     TreeNode(const GameState &state, std::shared_ptr<TreeNode> parent, Stone next_move_stone,
                 const std::pair<int, int> &from_move) : state{state},
                 parent{parent}, next_move_stone{next_move_stone}, from_move{from_move} {
-        UpdateExploitPriority();
     }
 
-    void UpdateExploitPriority() {
+    double GetExploitPriority() {
         if (parent == nullptr) {
-            return;
+            return std::numeric_limits<double>::infinity();
         }
-        exploit_priority = ComputeExploitPriority(parent->visit_count);
+        return ComputeExploitPriority(parent->visit_count);
     }
-
 
 private:
     double ComputeExploitPriority(int parent_total_rounds) {
@@ -50,7 +42,7 @@ private:
             return std::numeric_limits<double>::infinity();
         }
         double win_ratio = win_count / visit_count;
-        double exploit = coef * std::sqrt(std::log(parent_total_rounds) / visit_count);
+        double exploit = coef * std::sqrt(std::log<double>(parent_total_rounds) / visit_count);
         return win_ratio + exploit;
     }
 };
@@ -60,15 +52,15 @@ public:
     MonteCarloTreeSearch() = default;
     std::pair<int, int> SearchMove(const GameState &board_state, Stone next_move_stone, int simulation_count = 10000);
 
-    int GetTreeNodesNumbers() {
+    int GetTreeNodesNumbers() const {
         return GetTreeNodesNumbers_(*root);
     }
 
-    int GetTreeDepth() {
+    int GetTreeDepth() const {
         return GetTreeDepth_(*root);
     }
 
-    std::vector<int> StatDepthNodesNumbers();
+    std::vector<int> StatDepthNodesNumbers() const;
 private:
     std::shared_ptr<TreeNode> Selection();
     void ExpandNode(const std::shared_ptr<TreeNode> &node);
@@ -76,8 +68,8 @@ private:
     Stone Simulate(const GameState &board_state, Stone next_move_stone);
     std::pair<int, int> GetBestMove();
     std::shared_ptr<TreeNode> root;
-    int GetTreeNodesNumbers_(TreeNode &node);
-    int GetTreeDepth_(TreeNode &node);
+    int GetTreeNodesNumbers_(const TreeNode &node) const;
+    int GetTreeDepth_(const TreeNode &node) const;
 };
 
 #endif
