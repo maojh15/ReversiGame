@@ -90,7 +90,7 @@ Stone GetGameWinner(const GameState &board_state) {
 }
 
 std::pair<int, int> MonteCarloTreeSearch::SearchMove(const GameState &board_state,
-    Stone next_move_stone, int simulation_count)
+    Stone next_move_stone, int simulation_count, std::vector<std::tuple<int, int, double>> *move_win_ratio)
 {
     // pgbar::ProgressBar<> pbar;
     pgbar::BlockBar<> pbar;
@@ -110,6 +110,12 @@ std::pair<int, int> MonteCarloTreeSearch::SearchMove(const GameState &board_stat
     }
     auto time2 = std::chrono::steady_clock::now();
     std::cout << "\nAI think time: " << std::chrono::duration<double>(time2 - time1).count() << "s" << std::endl;
+    if (move_win_ratio != nullptr) {
+        move_win_ratio->clear();
+        for (const auto &ch : root->children) {
+            move_win_ratio->emplace_back(ch->from_move.first, ch->from_move.second, ch->win_count / ch->visit_count);
+        }
+    }
     return GetBestMove();
 }
 
@@ -216,11 +222,10 @@ std::pair<int, int> MonteCarloTreeSearch::GetBestMove()
     std::cout << "win ratio: " << best_node->win_count << "/" << best_node->visit_count
         << " = " << best_node->win_count / best_node->visit_count << std::endl;
     for (const auto &ch : root->children) {
-        std::cout << "[" << ch->win_count << "/" << ch->visit_count
+        std::cout << "[" << static_cast<char>(ch->from_move.first + 'A') << ch->from_move.second << ":" << ch->win_count << "/" << ch->visit_count
             << "=" << ch->win_count / ch->visit_count << "] ";
     }
-    std::cout << std::endl;
-    std::cout << "root visit count: " << root->visit_count << std::endl;
+    std::cout << "\nroot visit count: " << root->visit_count << std::endl;
     return best_node->from_move;
 }
 

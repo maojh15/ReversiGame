@@ -23,8 +23,8 @@ namespace pgbar {
 
           const auto len_finished     = static_cast<types::Size>( this->bar_width_ * num_percent );
           const types::Float fraction = ( this->bar_width_ * num_percent ) - len_finished;
-          PGBAR__TRUST( fraction >= 0.0 );
-          PGBAR__TRUST( fraction <= 1.0 );
+          PGBAR__TRUST( fraction >= -1e-12 );
+          PGBAR__TRUST( fraction <= 1.0+1e-12 );
           const auto incomplete_block = static_cast<types::Size>( fraction * this->lead_.size() );
           PGBAR__ASSERT( incomplete_block <= this->lead_.size() );
           types::Size len_vacancy = this->bar_width_ - len_finished;

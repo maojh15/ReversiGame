@@ -102,11 +102,14 @@ void ReversiGame::GameConclude()
     }
 }
 
+
 void ReversiGame::PlaceStone(int grid_x, int grid_y)
 {
+    hint_player_move = false;
     UpdateBoardWithPlacementStone(board_state_, grid_x, grid_y, next_move_stone_);
     UpdateStoneCount();
     record_move_.emplace_back(grid_x, grid_y);
+    record_board_state_.emplace_back(board_state_);
 
     Stone opp_stone = GetOpponentStone(next_move_stone_);
     valid_moves_ = GetValidMoves(opp_stone, board_state_);
@@ -160,15 +163,15 @@ void ReversiGame::UpdateStoneCount()
     }
 }
 
-void ReversiGame::SearchMove()
+void ReversiGame::SearchMove(bool place_stone)
 {
     ai_think_finish = false;
     for (auto &th : ai_think_threads_) {
         th.join();
     }
     ai_think_threads_.clear();
-    ai_think_threads_.emplace_back(std::thread([this]() mutable {
-        auto move = mcts_.SearchMove(board_state_, next_move_stone_, monte_carlo_iter_steps_);
+    ai_think_threads_.emplace_back(std::thread([this, place_stone]() mutable {
+        auto move = mcts_.SearchMove(board_state_, next_move_stone_, monte_carlo_iter_steps_, &hint_move_win_ratio);
         std::cout << "num nodes: " << mcts_.GetTreeNodesNumbers() << std::endl;
         std::cout << "depth: " << mcts_.GetTreeDepth() << std::endl;
         std::cout << "node in each depth: [";
@@ -177,15 +180,42 @@ void ReversiGame::SearchMove()
             std::cout << list_depth[i] << ", ";
         }
         std::cout << "]" << std::endl;
-        PlaceStone(move.first, move.second);
+        if (place_stone) {
+            PlaceStone(move.first, move.second);
+        } else {
+            hint_player_move = true;
+            hint_move_pos = move;
+        }
         ai_think_finish = true;
     }));
+}
+
+void ReversiGame::WithdrawAMove()
+{
+    if (!is_player_turn_ || record_move_.empty()) {
+        return;
+    }
+    Stone player_stone = this_game_player_first ? Stone::BLACK : Stone::WHITE;
+    while (!record_board_state_.empty() && record_board_state_.back()[record_move_.back().first][record_move_.back().second] != player_stone) {
+        record_move_.pop_back();
+        record_board_state_.pop_back();
+    }
+    if (!record_move_.empty()) {
+        record_move_.pop_back();
+        record_board_state_.pop_back();
+    }
+    board_state_ = record_board_state_.back();
+    hint_player_move = false;
+    UpdateStoneCount();
+    valid_moves_ = GetValidMoves(next_move_stone_, board_state_);
+    ResetIsMoveValid();
 }
 
 void ReversiGame::InitialGame()
 {
     game_state_ = GameState::PLAYING;
     record_move_.clear();
+    record_board_state_.clear();
     board_state_.clear();
     board_state_ = std::vector<std::vector<Stone>>(board_size_, std::vector<Stone>(board_size_, Stone::EMPTY));
     // reset board state
@@ -205,6 +235,8 @@ void ReversiGame::InitialGame()
     hint_text_ = is_player_turn_ ? hint_players_turn : hint_computer_turn;
 
     ai_think_finish = true;
+    hint_player_move = false;
+    record_board_state_.emplace_back(board_state_);
 }
 
 
@@ -287,4 +319,11 @@ void ReversiGame::UpdateBoardWithPlacementStone(std::vector<std::vector<Stone>> 
             }
         }
     }
+}
+
+void ReversiGame::HintPlayerMove()
+{
+    if (is_player_turn_ && ai_think_finish && !hint_player_move) {
+        SearchMove(false);
+    } 
 }

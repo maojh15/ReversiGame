@@ -43,12 +43,24 @@ void GameUI::DrawBoard(ReversiGame &game, const ImVec2 &left_top_pos, const ImVe
 
     // draw lines
     line_interval = (right_btm_pos.x - left_top_pos.x) / game.board_size_;
+    auto text_sz = ImGui::CalcTextSize("A");
+    ImColor text_col = ImGui::GetColorU32(ImVec4(1,1,1, 1));
+    draw_list->AddText(ImVec2(left_top_pos.x - text_sz.x - boaden_pixel, left_top_pos.y - (text_sz.y - line_interval) * 0.5),
+                       text_col, "0");
+    draw_list->AddText(ImVec2(left_top_pos.x - (text_sz.x - line_interval) * 0.5, left_top_pos.y - text_sz.y - boaden_pixel),
+                       text_col, "A");
     for (int i = 1; i < game.board_size_; ++i) {
         float y_pos = left_top_pos.y + i * line_interval;
         draw_list->AddLine(ImVec2(left_top_pos.x, y_pos), ImVec2(right_btm_pos.x, y_pos), line_col);
         float x_pos = left_top_pos.x + i * line_interval;
         draw_list->AddLine(ImVec2(x_pos, left_top_pos.y), ImVec2(x_pos, right_btm_pos.y), line_col);
+        char c = static_cast<char>(i + 'A');
+        draw_list->AddText(ImVec2(x_pos - (text_sz.x - line_interval) * 0.5, left_top_pos.y - text_sz.y - boaden_pixel),
+                           text_col, std::string(1, c).c_str());
+        draw_list->AddText(ImVec2(left_top_pos.x - text_sz.x - boaden_pixel, y_pos - (text_sz.y - line_interval) * 0.5),
+                           text_col, std::to_string(i).c_str());
     }
+    
 
     // draw five dots
     float dot_radius = std::min<float>(5, 0.1*line_interval);
@@ -69,6 +81,11 @@ void GameUI::DrawBoard(ReversiGame &game, const ImVec2 &left_top_pos, const ImVe
     for (const auto &move : game.valid_moves_) {
         draw_list->AddCircleFilled(ImVec2(left_top_pos.x + line_interval * (move.first+0.5), left_top_pos.y + line_interval * (move.second+0.5)),
                                    hint_radius, hint_valid_move_col);
+    }
+    if (game.hint_player_move) {
+        ImColor hint_player_move_col = ImColor(ImVec4(1, 0, 0, 0.5f));
+        draw_list->AddCircleFilled(ImVec2(left_top_pos.x + line_interval * (game.hint_move_pos.first+0.5), left_top_pos.y + line_interval * (game.hint_move_pos.second+0.5)),
+                                   hint_radius, hint_player_move_col);
     }
 
 
@@ -102,6 +119,18 @@ void GameUI::DrawBoard(ReversiGame &game, const ImVec2 &left_top_pos, const ImVe
         }
     }
 
+    if (game.hint_player_move) {
+        // show hint move win ratio
+        ImColor hint_win_ratio_col = ImColor(ImVec4(1, 1, 0, 1));
+        char win_ratio_text[64];
+        for (const auto &hint : game.hint_move_win_ratio) {
+            auto [x, y, ratio] = hint;
+            snprintf(win_ratio_text, sizeof(win_ratio_text), "%.3f", ratio);
+            draw_list->AddText(ImVec2(left_top_pos.x + line_interval * (x+0.5), left_top_pos.y + line_interval * (y+0.5)),
+                               hint_win_ratio_col, win_ratio_text);
+        }
+    }
+
     // draw hint last move
     if (game.record_move_.empty()) {
         return;
@@ -118,7 +147,7 @@ void GameUI::DrawBoard(ReversiGame &game, const ImVec2 &left_top_pos, const ImVe
 std::pair<ImVec2, ImVec2>  GameUI::DrawMainPanel(ReversiGame &game)
 {
     auto &io = ImGui::GetIO();
-    ImVec2 win_sz(std::min<float>(200.0f, io.DisplaySize.x * 0.3f), std::min<float>(180.0f, io.DisplaySize.y*0.5f));
+    ImVec2 win_sz(std::min<float>(200.0f, io.DisplaySize.x * 0.3f), std::min<float>(285.0f, io.DisplaySize.y*0.66f));
     ImVec2 win_pos(10, 10);
     ImGui::SetNextWindowSize(win_sz, ImGuiCond_Always);
     ImGui::SetNextWindowPos(win_pos);
@@ -128,7 +157,7 @@ std::pair<ImVec2, ImVec2>  GameUI::DrawMainPanel(ReversiGame &game)
         ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoCollapse);
     ImGui::Text("fps: %.3f", game.GetFps());
 
-    ImVec2 btn_sz(100, 30);
+    ImVec2 btn_sz(120, 30);
     ImGui::SetCursorPosX((win_sz.x - btn_sz.x) * 0.5f);
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 10);
     if (ImGui::Button("New Game", btn_sz)) {
@@ -150,6 +179,16 @@ std::pair<ImVec2, ImVec2>  GameUI::DrawMainPanel(ReversiGame &game)
     if (ImGui::RadioButton("AI", !game.next_game_player_first)) {
         game.next_game_player_first = false;
     }
+    ImGui::SetCursorPosX((win_sz.x - btn_sz.x) * 0.5f);
+    if (ImGui::Button("hint player move", btn_sz)) {
+        game.HintPlayerMove();
+    }
+    ImGui::SetCursorPosX((win_sz.x - btn_sz.x) * 0.5f);
+    if (ImGui::Button("withdraw a move", btn_sz)) {
+        game.WithdrawAMove();
+    }
+    ImGui::Text("AI search itr steps: ");
+    ImGui::InputInt("##itr_steps", &game.monte_carlo_iter_steps_);
     ImGui::Text("Player use %s stone.", game.this_game_player_first ? "black" : "white");
 
     this->win_pos = ImGui::GetWindowPos();

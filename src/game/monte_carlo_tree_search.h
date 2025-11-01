@@ -50,7 +50,8 @@ private:
 class MonteCarloTreeSearch {
 public:
     MonteCarloTreeSearch() = default;
-    std::pair<int, int> SearchMove(const GameState &board_state, Stone next_move_stone, int simulation_count = 10000);
+    std::pair<int, int> SearchMove(const GameState &board_state, Stone next_move_stone, int simulation_count = 10000,
+        std::vector<std::tuple<int, int, double>> *move_win_ratio = nullptr);
 
     int GetTreeNodesNumbers() const {
         return GetTreeNodesNumbers_(*root);

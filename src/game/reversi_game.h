@@ -13,6 +13,7 @@
 #include <utility>
 #include <atomic>
 #include <thread>
+#include <tuple>
 
 class ReversiGame {
 public:
@@ -34,6 +35,8 @@ public:
     static std::vector<std::pair<int, int>> GetValidMoves(Stone player_stone, const std::vector<std::vector<Stone>> &board_state);
     static Stone GetOpponentStone(Stone stone);
     static void UpdateBoardWithPlacementStone(std::vector<std::vector<Stone>> &board_state, int place_x, int place_y, Stone place_stone);
+
+    void HintPlayerMove();
 
     ~ReversiGame() {
         for (auto &t: ai_think_threads_) {
@@ -65,7 +68,8 @@ private:
     void HandleUserInput();
     void UpdateStoneCount();
 
-    void SearchMove();
+    void SearchMove(bool place_stone = true);
+    void WithdrawAMove();
 
     YAML::Node config;
 
@@ -80,6 +84,7 @@ private:
     GameState game_state_ = GameState::PLAYING;
 
     std::vector<std::pair<int,int>> record_move_;
+    std::vector<decltype(board_state_)> record_board_state_;
 
     std::string hint_text_;
 
@@ -96,6 +101,10 @@ private:
     std::atomic<bool> ai_think_finish = true;
     int monte_carlo_iter_steps_ = 60000;
     std::vector<std::thread> ai_think_threads_;
+
+    bool hint_player_move = false;
+    std::pair<int, int> hint_move_pos;
+    std::vector<std::tuple<int, int, double>> hint_move_win_ratio;
 };
 
 #endif
