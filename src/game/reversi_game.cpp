@@ -23,28 +23,62 @@ void ReversiGame::MainLoop()
         ImVec2(center.x+board_draw_sz, center.y+board_draw_sz));
 
     // Debug Menu
-    if (ImGui::Button("Reload config")) {
-        LoadConfig();
-    }
-    auto imcol_to_array = [&](ImColor &col, float ret[3]) {
-        ret[0] = col.Value.x;
-        ret[1] = col.Value.y;
-        ret[2] = col.Value.z;
-    };
-    float bg_col[3];
-    imcol_to_array(game_ui.hint_valid_move_col, bg_col);
-    if (ImGui::ColorEdit3("bg color", bg_col, ImGuiColorEditFlags_Float)) {
-        game_ui.hint_valid_move_col = ImColor(ImVec4(bg_col[0], bg_col[1], bg_col[2], 1.0));
-    }
-    if (ImGui::Button("dump config")) {
-        DumpConfig();
+    if constexpr (true) {
+        if (ImGui::Button("Reload config")) {
+            LoadConfig();
+        }
+        auto imcol_to_array = [&](ImColor &col, float ret[3]) {
+            ret[0] = col.Value.x;
+            ret[1] = col.Value.y;
+            ret[2] = col.Value.z;
+        };
+        float bg_col[3];
+        imcol_to_array(game_ui.hint_valid_move_col, bg_col);
+        if (ImGui::ColorEdit3("bg color", bg_col, ImGuiColorEditFlags_Float)) {
+            game_ui.hint_valid_move_col = ImColor(ImVec4(bg_col[0], bg_col[1], bg_col[2], 1.0));
+        }
+        if (ImGui::Button("dump config")) {
+            DumpConfig();
+        }
+        if (ImGui::Button("Set game over")) {
+            GameConclude();
+        }
     }
 
-    if (!is_player_turn_ && game_state_ == GameState::PLAYING && ai_think_finish) {
-        SearchMove();
+    switch (game_state_) {
+        case GameState::PLAYING:
+            if (!is_player_turn_ && ai_think_finish) {
+                SearchMove();
+            }
+            HandleUserInput();
+            break;
+        case GameState::GAME_OVER:
+        default:
+            if (!game_over_popup_opened_once_) {
+                ImGui::OpenPopup("Game Over");
+                game_over_popup_opened_once_ = true;
+            }
+            break;
     }
 
-    HandleUserInput();
+    if (ImGui::BeginPopupModal("Game Over")) {
+        ImGui::Text("Game Over, %s", hint_text_.c_str());
+        ImVec2 btn_sz(80, 25);
+        float width = ImGui::GetWindowWidth();
+        float btn_interval = 10;
+        ImGui::SetCursorPosX((width - btn_sz.x * 2 - btn_interval) * 0.5);
+        if (ImGui::Button("Retry", btn_sz)) {
+            InitialGame();
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        ImGui::SetCursorPosX((width + btn_interval) * 0.5);
+        if (ImGui::Button("Close", btn_sz)) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
 }
 
 void ReversiGame::LoadConfig()
@@ -237,6 +271,7 @@ void ReversiGame::InitialGame()
     ai_think_finish = true;
     hint_player_move = false;
     record_board_state_.emplace_back(board_state_);
+    game_over_popup_opened_once_ = false;
 }
 
 

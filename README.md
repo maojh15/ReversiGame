@@ -230,7 +230,7 @@ If CMake cannot find SDL2:
 - **ImGui**: [Dear ImGui](https://github.com/ocornut/imgui) by Omar Cornut
 - **yaml-cpp**: [yaml-cpp](https://github.com/jbeder/yaml-cpp) by Jesse Beder
 - **SDL2**: [Simple DirectMedia Layer](https://www.libsdl.org/)
-- **pgbar**: [pgbar](https://github.com/Konvt/pgbar.git) by Konvt
+- **tqdm**: [tqdm](https://github.com/aminnj/cpptqdm.git) by Nick Amin
 
 ## Contributing
 

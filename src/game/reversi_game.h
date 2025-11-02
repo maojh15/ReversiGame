@@ -105,6 +105,8 @@ private:
     bool hint_player_move = false;
     std::pair<int, int> hint_move_pos;
     std::vector<std::tuple<int, int, double>> hint_move_win_ratio;
+
+    bool game_over_popup_opened_once_ = false;
 };
 
 #endif
