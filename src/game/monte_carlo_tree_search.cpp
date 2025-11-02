@@ -1,7 +1,6 @@
 #include "monte_carlo_tree_search.h"
 #include "reversi_game.h"
-#include "pgbar/ProgressBar.hpp"
-#include "pgbar/BlockBar.hpp"
+#include "tqdm.h"
 
 #include <random>
 #include <iostream>
@@ -92,15 +91,13 @@ Stone GetGameWinner(const GameState &board_state) {
 std::pair<int, int> MonteCarloTreeSearch::SearchMove(const GameState &board_state,
     Stone next_move_stone, int simulation_count, std::vector<std::tuple<int, int, double>> *move_win_ratio)
 {
-    // pgbar::ProgressBar<> pbar;
-    pgbar::BlockBar<> pbar;
-    pbar.config().prefix("search move ");
-    pbar.config().style( pgbar::config::Line::Entire ).tasks(simulation_count);
+    tqdm pbar;
+    pbar.set_label("search move");
 
     auto time1 = std::chrono::steady_clock::now();
     root = std::make_shared<TreeNode>(board_state, nullptr, next_move_stone, std::pair<int, int>(-1, -1));
     for (int i = 0; i < simulation_count; ++i) {
-        pbar.tick();
+        pbar.progress(i, simulation_count);
         auto node = Selection();
         if (node == nullptr) continue;
         ExpandNode(node);
@@ -108,6 +105,7 @@ std::pair<int, int> MonteCarloTreeSearch::SearchMove(const GameState &board_stat
         auto winner = Simulate(leaf->state, leaf->next_move_stone);
         BackPropagate(leaf, winner);
     }
+    pbar.finish();
     auto time2 = std::chrono::steady_clock::now();
     std::cout << "\nAI think time: " << std::chrono::duration<double>(time2 - time1).count() << "s" << std::endl;
     if (move_win_ratio != nullptr) {
